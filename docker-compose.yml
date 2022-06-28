@@ -1,0 +1,84 @@
+version: '3.9'
+
+networks:
+  codebinge:
+    driver: bridge
+
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: DockerfileNginx
+    container_name: nginx
+    ports:
+      - '80:80'
+    volumes:
+      - ./backend/public:/var/www/html/public
+    networks:
+      - codebinge
+    depends_on:
+      - mysql
+      - backend
+      - client
+
+  client:
+    build:
+      context: .
+      dockerfile: DockerfileNode
+    container_name: client
+    networks:
+      - codebinge
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: backend
+    volumes:
+      - ./backend:/var/www/html
+    networks:
+      - codebinge
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    ports:
+      - '3306:3306'
+    environment:
+      MYSQL_DATABASE: '${MYSQL_DATABASE}'
+      MYSQL_USER: '${MYSQL_USER}'
+      MYSQL_PASSWORD: '${MYSQL_PASSWORD}'
+      MYSQL_ROOT_PASSWORD: '${MYSQL_ROOT_PASSWORD}'
+    volumes:
+      - database:/var/lib/mysql
+    networks:
+      - codebinge
+
+  composer:
+    build:
+      context: .
+      dockerfile: DockerfileComposer
+    container_name: composer
+    volumes:
+      - ./backend:/var/www/html
+    networks:
+      - codebinge
+    working_dir: /var/www/html
+
+  artisan:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: artisan
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+    networks:
+      - codebinge
+    depends_on:
+      - mysql
+    entrypoint: ["php", "/var/www/html/artisan"]
+
+volumes:
+  database:
+    driver: local
